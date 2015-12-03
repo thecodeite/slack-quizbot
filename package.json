@@ -4,7 +4,8 @@
   "description": "A quiz bot for Slack",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "./node_modules/mocha/bin/mocha ./tests/**/*.js"
   },
   "license": "ISC",
   "dependencies": {
@@ -13,5 +14,10 @@
     "lodash": "^3.9.3",
     "slack-client": "^1.4.1",
     "sqlite3": "^3.1.1"
+  },
+  "devDependencies": {
+    "chai": "^3.4.1",
+    "mocha": "^2.3.4",
+    "sinon": "^1.17.2"
   }
 }
