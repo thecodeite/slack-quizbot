@@ -12,9 +12,8 @@ function createQuizBot(options) {
     startQuizBot: startQuizBot
   };
 
-  function startQuizBot(doc) {
+  function startQuizBot(questionCount) {
     var questionTimeoutSec = 30; // todo: parameterise
-    var questionCount = doc.questionCount;
     console.log("%d questions loaded", questionCount);
 
     

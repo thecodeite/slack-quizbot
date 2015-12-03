@@ -13,7 +13,9 @@ var quizBot = require('./quiz-bot')({
 
 
 quizRepo.getQuestionCount()
-  .then(quizBot.startQuizBot);
+  .then(function (doc) {
+      quizBot.startQuizBot(doc.questionCount);
+  });
 
 
 
