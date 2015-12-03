@@ -7,7 +7,7 @@ function createQuizBot(options) {
   var config = options.config;
   var quizRepo = options.quizRepo;
 
-  
+
   return {
     startQuizBot: startQuizBot
   };
@@ -16,8 +16,8 @@ function createQuizBot(options) {
     var questionTimeoutSec = 30; // todo: parameterise
     console.log("%d questions loaded", questionCount);
 
-    
-    slack.on('open', function () {
+
+    slack.on('open', function() {
       console.log('Connected to Slack');
     });
 
@@ -30,32 +30,51 @@ function createQuizBot(options) {
     var currentQuizItem = null;
     var timeQuestionAsked = null;
     var questionTimeOutId = null;
+    var players = [];
 
 
-    slack.on('message', function (message) {
+    slack.on('message', function(message) {
       var channel = slack.getChannelGroupOrDMByID(message.channel);
       if (channel.name !== config.get('slack.channel')) {
         return;
       }
       var user = slack.getUserByID(message.user);
+
+      var playersNames = players.map(function(p) {
+        return p.name
+      });
+      if (user && user.name) {
+        if (playersNames.indexOf(user.name) === -1) {
+          var player = new Player(user.id, user.name);
+          players.push(player);
+        }
+      }
+
       var type = message.type;
       var text = message.text;
 
       if (type === 'message' && channel && text) {
         if (state === states.waitingForAnswer) {
-          if (text.toLowerCase().trim() == currentQuizItem.a.toLowerCase().trim()) {
+          if (prune(text) === prune(currentQuizItem.a)) {
             clearTimeout(questionTimeOutId);
             state = states.idle;
             var timeDelta = (new Date() - timeQuestionAsked) / 1000;
+            var player = findPlayer(user.id, players);
+            player.points++;
             channel.send(user.name + " answered correctly in " + timeDelta + " seconds");
           }
-        }
-        else if (text.toLowerCase().trim() === 'q') {
-          quizRepo.getQuestionById(_.random(questionCount), function (err, doc) {
+        } else if (prune(text) === 'scores') {
+          var scoreboard = players.map(function(p) {
+            return p.name + ": " + p.points;
+          }).join("\n");
+          console.log(scoreboard);
+          channel.send("CURRENT SCORES:\n" + scoreboard);
+        } else if (prune(text) === 'q') {
+          quizRepo.getQuestionById(_.random(questionCount), function(err, doc) {
             currentQuizItem = doc;
             channel.send(util.format('[%s] %s ( %s )', doc.id, doc.q, formatAsBlanks(doc.a)));
             timeQuestionAsked = new Date();
-            questionTimeOutId = setTimeout(function () {
+            questionTimeOutId = setTimeout(function() {
               state = states.idle;
               channel.send('Time up! The answer was: ' + currentQuizItem.a);
             }, questionTimeoutSec * 1000);
@@ -66,12 +85,28 @@ function createQuizBot(options) {
       }
     });
 
-    slack.on('error', function (error) {
+    slack.on('error', function(error) {
       console.error('Error: ', error);
     });
 
     slack.login();
   }
+}
+
+function Player(id, name) {
+  this.id = id;
+  this.name = name;
+  this.points = 0;
+}
+
+function findPlayer(id, players) {
+  return players.filter(function(p) {
+    return p.id === id;
+  })[0];
+}
+
+function prune(text) {
+  return text.toLowerCase().trim();
 }
 
 module.exports = createQuizBot;
